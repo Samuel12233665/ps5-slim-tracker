@@ -11,9 +11,12 @@
     h1 { font-size: 1.4rem; margin: 0 0 8px; color: #111827; }
     .meta { font-size: 0.9rem; color: #6b7280; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
     .badge-msrp { background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
+    .btn-group { display: flex; gap: 8px; align-items: center; }
     .refresh-btn { padding: 10px 16px; background: #059669; color: #fff; border: none; border-radius: 8px; font-size: 0.92rem; font-weight: 600; cursor: pointer; }
     .refresh-btn:hover:not(:disabled) { background: #047857; }
     .refresh-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+    .token-btn { padding: 10px 12px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.85rem; cursor: pointer; }
+    .token-btn:hover { background: #e5e7eb; }
     .status-msg { font-size: 0.88rem; color: #374151; background: #f9fafb; border: 1px solid #e5e7eb; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; display: none; }
     table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
     th, td { padding: 14px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
@@ -38,7 +41,10 @@
           <span class="badge-msrp">官方建議零售價：HK$4,257</span>
         </div>
       </div>
-      <button id="refreshBtn" class="refresh-btn" onclick="triggerRefresh()">🔄 立即重新查價</button>
+      <div class="btn-group">
+        <button id="refreshBtn" class="refresh-btn" onclick="triggerRefresh()">🔄 立即重新查價</button>
+        <button class="token-btn" onclick="resetToken()" title="重設本機儲存的 GitHub Token">🔑 重設 Token</button>
+      </div>
     </div>
 
     <div id="statusMsg" class="status-msg"></div>
@@ -64,7 +70,25 @@
     const OWNER = "Samuel12233665";
     const REPO = "ps5-slim-tracker";
     const WORKFLOW_FILE = "daily.yml";
-    const TOKEN = "把這裡換成你的_TOKEN";
+    const STORAGE_KEY = "ps5_tracker_gh_token";
+
+    function getToken() {
+      let token = localStorage.getItem(STORAGE_KEY);
+      if (!token) {
+        token = prompt("請貼上你的 GitHub Fine-grained Token（只會儲存在你目前瀏覽器本機，不會上傳至公開網頁）：");
+        if (token && token.trim()) {
+          localStorage.setItem(STORAGE_KEY, token.trim());
+          return token.trim();
+        }
+        return null;
+      }
+      return token;
+    }
+
+    function resetToken() {
+      localStorage.removeItem(STORAGE_KEY);
+      alert("已清除本機儲存的 Token，下次點擊「立即重新查價」時可重新貼上。");
+    }
 
     function loadTable() {
       fetch('data.json?t=' + Date.now())
@@ -110,9 +134,11 @@
     async function triggerRefresh() {
       const btn = document.getElementById('refreshBtn');
       const msg = document.getElementById('statusMsg');
-      if (!TOKEN || TOKEN === "把這裡換成你的_TOKEN") {
+      const token = getToken();
+
+      if (!token) {
         msg.style.display = 'block';
-        msg.textContent = '⚠️ 尚未填入 GitHub Token，請先在 index.html 設定 TOKEN。';
+        msg.textContent = '⚠️ 未輸入 Token，已取消操作。';
         return;
       }
 
@@ -125,7 +151,7 @@
         const resp = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW_FILE}/dispatches`, {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${TOKEN}`,
+            "Authorization": `Bearer ${token}`,
             "Accept": "application/vnd.github+json",
             "Content-Type": "application/json"
           },
@@ -133,6 +159,9 @@
         });
 
         if (!resp.ok) {
+          if (resp.status === 401 || resp.status === 403) {
+            localStorage.removeItem(STORAGE_KEY);
+          }
           throw new Error(`API 回應狀態 ${resp.status}`);
         }
 
@@ -164,7 +193,7 @@
       } catch (err) {
         btn.disabled = false;
         btn.textContent = '🔄 立即重新查價';
-        msg.textContent = `❌ 觸發失敗（${err.message}），請確認 Token 權限與工作流檔名是否為 daily.yml。`;
+        msg.textContent = `❌ 觸發失敗（${err.message}），請檢查 Token 是否有效或重新產生一組。`;
       }
     }
 
