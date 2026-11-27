@@ -7,9 +7,14 @@
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; color: #1f2937; margin: 0; padding: 20px; }
     .container { max-width: 960px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); padding: 24px; }
+    .top-bar { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
     h1 { font-size: 1.4rem; margin: 0 0 8px; color: #111827; }
-    .meta { font-size: 0.9rem; color: #6b7280; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 16px; }
+    .meta { font-size: 0.9rem; color: #6b7280; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
     .badge-msrp { background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
+    .refresh-btn { padding: 10px 16px; background: #059669; color: #fff; border: none; border-radius: 8px; font-size: 0.92rem; font-weight: 600; cursor: pointer; }
+    .refresh-btn:hover:not(:disabled) { background: #047857; }
+    .refresh-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+    .status-msg { font-size: 0.88rem; color: #374151; background: #f9fafb; border: 1px solid #e5e7eb; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; display: none; }
     table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
     th, td { padding: 14px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
     th { background: #f9fafb; font-weight: 600; color: #374151; }
@@ -25,11 +30,19 @@
 </head>
 <body>
   <div class="container">
-    <h1>🎮 香港 PS5 Slim 數位版 (CFI-2118B01) 每日現貨監察</h1>
-    <div class="meta">
-      <span>最後更新：<strong id="updated-at">載入中...</strong> (香港時間)</span>
-      <span class="badge-msrp">官方建議零售價：HK$4,257</span>
+    <div class="top-bar">
+      <div>
+        <h1>🎮 香港 PS5 Slim 數位版 (CFI-2118B01) 現貨監察</h1>
+        <div class="meta">
+          <span>最後更新：<strong id="updated-at">載入中...</strong> (香港時間)</span>
+          <span class="badge-msrp">官方建議零售價：HK$4,257</span>
+        </div>
+      </div>
+      <button id="refreshBtn" class="refresh-btn" onclick="triggerRefresh()">🔄 立即重新查價</button>
     </div>
+
+    <div id="statusMsg" class="status-msg"></div>
+
     <table>
       <thead>
         <tr>
@@ -48,44 +61,114 @@
   </div>
 
   <script>
-    fetch('data.json?t=' + Date.now())
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('updated-at').textContent = data.updated_at;
-        const tbody = document.getElementById('table-body');
-        tbody.innerHTML = '';
+    const OWNER = "Samuel12233665";
+    const REPO = "ps5-slim-tracker";
+    const WORKFLOW_FILE = "daily.yml";
+    const TOKEN = "把這裡換成你的_TOKEN";
 
-        data.items.forEach(item => {
-          const priceStr = item.price ? `HK$${item.price.toLocaleString()}` : '未顯示';
-          
-          let premStr = '-';
-          let premClass = 'flat';
-          if (item.premium !== null) {
-            if (item.premium > 0) { premStr = `+HK$${item.premium} (炒價/套裝)`; premClass = 'up'; }
-            else if (item.premium < 0) { premStr = `-HK$${Math.abs(item.premium)} (低於官價)`; premClass = 'down'; }
-            else { premStr = 'HK$0 (正價)'; }
-          }
+    function loadTable() {
+      fetch('data.json?t=' + Date.now())
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('updated-at').textContent = data.updated_at;
+          const tbody = document.getElementById('table-body');
+          tbody.innerHTML = '';
 
-          let diffStr = '無變動';
-          let diffClass = 'flat';
-          if (item.daily_diff > 0) { diffStr = `▲ +HK$${item.daily_diff}`; diffClass = 'up'; }
-          else if (item.daily_diff < 0) { diffStr = `▼ -HK$${Math.abs(item.daily_diff)}`; diffClass = 'down'; }
+          data.items.forEach(item => {
+            const priceStr = item.price ? `HK$${item.price.toLocaleString()}` : '未顯示';
 
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td><strong>${item.store}</strong><br><small style="color:#6b7280">${item.type}</small></td>
-            <td class="${item.is_available ? 'in-stock' : 'out-stock'}">${item.status}</td>
-            <td><strong>${priceStr}</strong></td>
-            <td class="${premClass}">${premStr}</td>
-            <td class="${diffClass}">${diffStr}</td>
-            <td><a class="btn" href="${item.url}" target="_blank">前往查看</a></td>
-          `;
-          tbody.appendChild(tr);
+            let premStr = '-';
+            let premClass = 'flat';
+            if (item.premium !== null) {
+              if (item.premium > 0) { premStr = `+HK$${item.premium} (炒價/套裝)`; premClass = 'up'; }
+              else if (item.premium < 0) { premStr = `-HK$${Math.abs(item.premium)} (低於官價)`; premClass = 'down'; }
+              else { premStr = 'HK$0 (正價)'; }
+            }
+
+            let diffStr = '無變動';
+            let diffClass = 'flat';
+            if (item.daily_diff > 0) { diffStr = `▲ +HK$${item.daily_diff}`; diffClass = 'up'; }
+            else if (item.daily_diff < 0) { diffStr = `▼ -HK$${Math.abs(item.daily_diff)}`; diffClass = 'down'; }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><strong>${item.store}</strong><br><small style="color:#6b7280">${item.type}</small></td>
+              <td class="${item.is_available ? 'in-stock' : 'out-stock'}">${item.status}</td>
+              <td><strong>${priceStr}</strong></td>
+              <td class="${premClass}">${premStr}</td>
+              <td class="${diffClass}">${diffStr}</td>
+              <td><a class="btn" href="${item.url}" target="_blank">前往查看</a></td>
+            `;
+            tbody.appendChild(tr);
+          });
+        })
+        .catch(() => {
+          document.getElementById('table-body').innerHTML = '<tr><td colspan="6">尚未產生數據，請按「立即重新查價」或先在 GitHub Actions 執行一次。</td></tr>';
         });
-      })
-      .catch(() => {
-        document.getElementById('table-body').innerHTML = '<tr><td colspan="6">尚未產生數據，請先在 GitHub Actions 執行一次工作流。</td></tr>';
-      });
+    }
+
+    async function triggerRefresh() {
+      const btn = document.getElementById('refreshBtn');
+      const msg = document.getElementById('statusMsg');
+      if (!TOKEN || TOKEN === "把這裡換成你的_TOKEN") {
+        msg.style.display = 'block';
+        msg.textContent = '⚠️ 尚未填入 GitHub Token，請先在 index.html 設定 TOKEN。';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '⏳ 正在啟動雲端查價...';
+      msg.style.display = 'block';
+      msg.textContent = '已送出指令，GitHub 雲端正在抓取各店最新價格與庫存（約需 30～60 秒），完成後將自動刷新表格...';
+
+      try {
+        const resp = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW_FILE}/dispatches`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${TOKEN}`,
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ ref: "main" })
+        });
+
+        if (!resp.ok) {
+          throw new Error(`API 回應狀態 ${resp.status}`);
+        }
+
+        const oldUpdated = document.getElementById('updated-at').textContent;
+        let checks = 0;
+        const timer = setInterval(async () => {
+          checks++;
+          try {
+            const res = await fetch('data.json?t=' + Date.now());
+            const latest = await res.json();
+            if (latest.updated_at && latest.updated_at !== oldUpdated) {
+              clearInterval(timer);
+              loadTable();
+              btn.disabled = false;
+              btn.textContent = '🔄 立即重新查價';
+              msg.textContent = `✅ 已更新至最新時間：${latest.updated_at}`;
+              return;
+            }
+          } catch (_) {}
+
+          if (checks >= 24) {
+            clearInterval(timer);
+            loadTable();
+            btn.disabled = false;
+            btn.textContent = '🔄 立即重新查價';
+            msg.textContent = '查價仍在背景進行中，請稍後再按一次或重新整理頁面查看。';
+          }
+        }, 5000);
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = '🔄 立即重新查價';
+        msg.textContent = `❌ 觸發失敗（${err.message}），請確認 Token 權限與工作流檔名是否為 daily.yml。`;
+      }
+    }
+
+    loadTable();
   </script>
 </body>
 </html>
