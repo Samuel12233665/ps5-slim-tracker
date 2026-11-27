@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-11-27 17:56",
-  "prev_updated_at": "2026-11-27 17:34",
+  "updated_at": "2026-11-28 00:28",
+  "prev_updated_at": "2026-11-27 17:56",
   "model": "PS5 Slim 數位版 (CFI-2118B01 / 825GB)",
   "msrp": 4257,
   "items": [
@@ -35,11 +35,11 @@
       "type": "大型連鎖 (網購/門市)",
       "status": "❌ 暫時無貨 / 假現貨過濾",
       "is_available": false,
-      "price": null,
+      "price": 5780,
       "prev_price": 5780,
       "msrp": 4257,
-      "premium": null,
-      "last_diff": 0,
+      "premium": 1523,
+      "last_diff": null,
       "url": "https://www.yohohongkong.com/zh-hk/product/400737-%E7%B4%A2%E5%B0%BC-Sony-PlayStation-5-Slim-%E6%95%B8%E4%BD%8D%E7%89%88%E9%81%8A%E6%88%B2%E4%B8%BB%E6%A9%9F-CFI-2118B01-825GB-%E6%96%B0%E5%8C%85%E8%A3%9D-%E9%A6%99%E6%B8%AF%E8%A1%8C%E8%B2%A8",
       "note": ""
     },
